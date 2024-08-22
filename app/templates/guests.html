@@ -1,0 +1,31 @@
+<h1>Guest List for Table {{ table_id }}</h1>
+
+{% if is_admin %}
+    <button type="button" class="btn btn-primary" onclick="openGuestRegistrationModal('{{ table_id }}')">+ Add Guest</button>
+    <button type="button" class="btn btn-secondary" onclick="openCoupleRegistrationModal('{{ table_id }}')">+ Add Couple</button>
+{% endif %}
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Confirmed</th>
+        </tr>
+    </thead>
+    
+    <tbody>
+    {% for guest in guests_list %}
+        <tr class="guest-item">
+            <td class="guest-info">{{ guest.name }}</td>
+            <td class="guest-info">{{ guest.surname }}</td>
+            <td>
+                {% if guest.confirmed %}
+                    <span class="confirmed">Հաստատված ✔</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+

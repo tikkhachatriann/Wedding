@@ -1,0 +1,35 @@
+{% for table_number, guest_info in guests.items() %}
+    {% for guest in guest_info %}
+        <div class="guest">
+            <div class="guest-container">
+                <div class="name-container">
+                    <span class="name-container-title">
+                        Name 
+                    </span>
+                    <p class="guest-info">{{ guest.name }}</p>
+                </div>
+                <div class="name-container">
+                    <span class="name-container-title">
+                        Surname 
+                    </span>
+                    <p class="guest-info">{{ guest.surname }}</p>
+                </div>
+                <div class="name-container">
+                    <span class="name-container-title">
+                        Table Number 
+                    </span>
+                    <p class="guest-info-number">{{ table_number }}</p>
+                </div>
+          
+                {% if guest.confirmed %}
+                    <p><span class="confirmed">Հաստատված ✔</span></p>
+                {% else %}
+                    <button type="button" class="confirm-button" data-guest-id="{{ guest.id }}">Confirm</button>
+                    <p id="confirmationMessage_{{ guest.id }}"></p>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+
