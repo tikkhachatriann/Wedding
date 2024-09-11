@@ -258,6 +258,5 @@ def confirm_guest():
     db.session.commit()
 
     return jsonify({
-                    "message": "Հյուրը հաջողությամբ հաստատվեց"
-                })
-
+        "message": "Հյուրը հաջողությամբ հաստատվեց"
+    })
