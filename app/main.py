@@ -1,5 +1,7 @@
 
-from app import db
+from config import DB, ADM_USERNAME, ADM_PWD
+
+from app import app
 from app.models import User, Table, Guest
 
 
@@ -23,11 +25,11 @@ class UserManager:
         new_user.set_password(password)
 
         try:
-            db.session.add(new_user)
-            db.session.commit()
+            DB.session.add(new_user)
+            DB.session.commit()
             return True
         except Exception:
-            db.session.rollback()
+            DB.session.rollback()
             return False
 
 
@@ -37,13 +39,13 @@ class TableManager:
         return Table.query.all()
 
     def create_table(self, table_number):
-        db.session.add(Table(table_number=table_number))
-        db.session.commit()
+        DB.session.add(Table(table_number=table_number))
+        DB.session.commit()
 
     def delete_table(self, table_number: int) -> bool:
         if table := Table.query.get(table_number):
-            db.session.delete(table)
-            db.session.commit()
+            DB.session.delete(table)
+            DB.session.commit()
             return True
         return False
 
@@ -56,7 +58,7 @@ class TableManager:
         for guest in guests:
             guest.confirmed = False
 
-        db.session.commit()
+        DB.session.commit()
 
         return False
 
@@ -73,7 +75,7 @@ class GuestManager:
         guest_id: int,
         table_number: int
     ):
-        db.session.add(
+        DB.session.add(
             Guest(
                 name=name,
                 surname=surname,
@@ -81,7 +83,7 @@ class GuestManager:
                 table_number=table_number
             )
         )
-        db.session.commit()
+        DB.session.commit()
 
     def register_couple(
         self,
@@ -92,7 +94,7 @@ class GuestManager:
         guest_id: int,
         table_number: int
     ):
-        db.session.add(
+        DB.session.add(
             Guest(
                 name=name1,
                 surname=surname1,
@@ -100,7 +102,7 @@ class GuestManager:
                 table_number=table_number
             )
         )
-        db.session.add(
+        DB.session.add(
             Guest(
                 name=name2,
                 surname=surname2,
@@ -108,7 +110,7 @@ class GuestManager:
                 table_number=table_number
             )
         )
-        db.session.commit()
+        DB.session.commit()
 
     def confirm_guest(self, guest_id):
         guest = Guest.query.get(guest_id)
@@ -116,7 +118,7 @@ class GuestManager:
         if not guest:
             return False
         guest.confirmed = True
-        db.session.commit()
+        DB.session.commit()
 
         return True
 
@@ -126,7 +128,7 @@ class GuestManager:
         for guest in Guest.query.all():
             name_low = guest.name.lower()
             if query in name_low or query == name_low:
-                table_number = guest.table_number 
+                table_number = guest.table_number
                 if table_number not in matched_guests:
                     matched_guests[table_number] = []
                 matched_guests[table_number].append({
@@ -137,3 +139,16 @@ class GuestManager:
                 })
 
         return matched_guests
+
+
+def create_admin():
+    with app.app_context():
+        admin = User.query.filter_by(username=ADM_USERNAME).first()
+        if admin:
+            admin.is_admin = True
+            DB.session.commit()
+        else:
+            admin = User(username=ADM_USERNAME, is_admin=True)
+            admin.set_password(ADM_PWD)
+            DB.session.add(admin)
+            DB.session.commit()

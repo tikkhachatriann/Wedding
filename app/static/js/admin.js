@@ -114,7 +114,7 @@ function submitCoupleRegistration() {
 
     $.ajax({
         type: 'POST',
-        url: '/register_couple',
+        url: '/register_guest',
         contentType: 'application/json',
         data: JSON.stringify(formData),
         success: function() {

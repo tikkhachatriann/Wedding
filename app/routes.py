@@ -9,8 +9,10 @@ from flask import (
 )
 from flask_login import login_user, login_required, logout_user
 
-from app import app, login_manager, db
+from app import app, login_manager
 from app.models import User, Table, Guest
+
+from config import DB
 
 
 @login_manager.user_loader
@@ -40,8 +42,8 @@ def login():
     return render_template('login.html')
 
 
-@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
+@app.route('/dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     if request.method == "POST":
 
@@ -51,15 +53,15 @@ def admin_dashboard():
         new_user.set_password(data["password"])
 
         try:
-            db.session.add(new_user)
-            db.session.commit()
+            DB.session.add(new_user)
+            DB.session.commit()
 
             flash("User created successfully", "success")
 
             return redirect(url_for("admin_dashboard"))
 
         except Exception:
-            db.session.rollback()
+            DB.session.rollback()
             flash('Failed to create user!', 'error')
 
     user = User.query.get(session.get("_user_id"))
@@ -67,7 +69,7 @@ def admin_dashboard():
     tables = Table.query.all()
     guests_by_table = {
         table.table_number:
-            Guest.query.filter_by(table_number=table.table_number).all()
+        Guest.query.filter_by(table_number=table.table_number).all()
         for table in tables
     }
 
@@ -83,25 +85,21 @@ def admin_dashboard():
 
 @app.route('/create_table', methods=['POST'])
 def create_table():
-    db.session.add(Table(table_number=request.json['tableNumber']))
-    db.session.commit()
+    DB.session.add(Table(table_number=request.json.get('tableNumber')))
+    DB.session.commit()
 
-    tables_json = [
-        {
-            'id': table.id,
-            'table_number': table.table_number
-        }
-        for table in Table.query.all()
-    ]
-
-    return jsonify({'tables': tables_json})
+    return jsonify({
+        'tables': [
+            {'id': table.id, 'table_number': table.table_number}
+            for table in Table.query.all()
+        ]
+    })
 
 
 @app.route('/reset_table_guests', methods=['POST'])
 def reset_table_guests():
     data = request.get_json()
     table_id = data.get('tableId')
-    print(table_id)
 
     if not table_id:
         return jsonify({"message": "Table ID is required."}), 400
@@ -115,25 +113,23 @@ def reset_table_guests():
         for guest in guests:
             guest.confirmed = False
 
-            # db.session.delete(guest)
+            # DB.session.delete(guest)
 
-        db.session.commit()
+        DB.session.commit()
 
         return jsonify({
             "message": "All guests for the table have been reset successfully."
         }), 200
     except Exception as e:
-        db.session.rollback()
+        DB.session.rollback()
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
 
 
 @app.route("/delete_table", methods=["POST"])
 def delete_table():
-    table = Table.query.get(request.get_json().get("tableId"))
-
-    if table:
-        db.session.delete(table)
-        db.session.commit()
+    if table := Table.query.get(request.get_json().get("tableId")):
+        DB.session.delete(table)
+        DB.session.commit()
 
         return jsonify({"message": "Table deleted successfully"}), 200
     else:
@@ -156,70 +152,45 @@ def get_guests(table_id):
 def register_guest():
     data = request.form
 
-    db.session.add(
-        Guest(
-            name=data.get("name"),
-            surname=data.get("surname"),
-            guest_id=data.get("guest_id"),
-            table_number=data.get("table_number")
+    for value in data.values():
+        if not value:
+            return jsonify({'message': 'Failed to register couple!'}), 400
+
+    if len(data) < 5:
+        DB.session.add(
+            Guest(
+                name=data.get("name"),
+                surname=data.get("surname"),
+                guest_id=data.get("guest_id"),
+                table_number=data.get("table_number")
+            )
         )
-    )
-    db.session.commit()
+    else:
+        DB.session.add(
+            Guest(
+                name=data.get("name1"),
+                surname=data.get("surname1"),
+                guest_id=data.get("guest_id"),
+                table_number=data.get("table_number")
+            )
+        )
+        DB.session.add(
+            Guest(
+                name=data.get("name2"),
+                surname=data.get("surname2"),
+                guest_id=data.get("guest_id"),
+                table_number=data.get("table_number")
+            )
+        )
+
+    DB.session.commit()
 
     return redirect(url_for("admin_dashboard"))
 
 
-@app.route("/register_couple", methods=["POST"])
-def register_couple():
-    data = request.json
-
-    name1 = data.get("name1")
-    surname1 = data.get("surname1")
-    name2 = data.get("name2")
-    surname2 = data.get("surname2")
-    guest_id = data.get("guest_id")
-    table_number = data.get("table_number")
-
-    if name1 and surname1 and name2 and surname2 and table_number:
-        guest1 = Guest(
-            name=name1,
-            surname=surname1,
-            guest_id=guest_id,
-            table_number=table_number
-        )
-
-        guest2 = Guest(
-            name=name2,
-            surname=surname2,
-            guest_id=guest_id,
-            table_number=table_number
-        )
-
-        db.session.add(guest1)
-        db.session.add(guest2)
-
-        db.session.commit()
-
-        return jsonify({'message': 'Couple registered successfully!'}), 200
-    else:
-        return jsonify({
-            'message': 'Failed to register couple!'
-        }), 400
-
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return 'Logged out successfully!'
-
-
 @app.route('/search', methods=['GET'])
 def search():
-    query = request.args.get('query')
-
-    if query:
-        query = query.lower()
+    if query := request.args.get('query').lower:
         matched_guests = {}
 
         for guest in Guest.query.all():
@@ -243,6 +214,7 @@ def search():
             return "No matching record found"
     else:
         matched_guests = {}
+
     return render_template('search.html', guests=matched_guests)
 
 
@@ -255,8 +227,15 @@ def confirm_guest():
         return jsonify({"message": "Հյուրը չի գտվնել"}), 404
 
     guest.confirmed = True
-    db.session.commit()
+    DB.session.commit()
 
     return jsonify({
         "message": "Հյուրը հաջողությամբ հաստատվեց"
     })
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return 'Logged out successfully!'
